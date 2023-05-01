@@ -2,6 +2,7 @@ const http = require("http");
 const express = require("express");
 const cors = require("cors");
 const socketIO = require("socket.io");
+const { group } = require("console");
 
 const app = express();
 const port = 9000 || process.env.PORT;
@@ -12,6 +13,7 @@ app.get("/", (req, res) => {
 });
 
 const users = [];
+const groupMessage = {};
 const server = http.createServer(app);
 
 const io = socketIO(server);
@@ -23,23 +25,33 @@ io.on("connection", (socket) => {
     socket.join(Group);
 
     socket.emit("welcome", {
-      user: "Admin",
-      message: `Welcome to the chat, ${user}`,
+      user: user,
+      message: `Welcome to the chat`,
     });
     const name = { id: socket.id, user, Group };
     users.push(name);
     console.log(`Welcome to the chat, ${user}`);
 
     socket.broadcast.to(Group).emit("userJoined", {
-      user: "Admin",
-      message: `${user} has joined`,
+      user: user,
+      message: `has joined`,
     });
+    // oldMessages.map((i) => {
+    socket.emit("sendOldMessage", groupMessage[Group] || []);
+    // });
+
     console.log(`${user} has joined`);
   });
 
-  socket.on("message", ({ message, id, Group }) => {
-    const name = users.find((name) => name.id === id);
-    io.to(name.Group).emit("sendMessage", { user: name.user, message, id });
+  socket.on("message", ({ message, id, Group, user }) => {
+    const messageUser = { user: user, message, id };
+    console.log(groupMessage);
+    if (groupMessage[Group]) {
+      groupMessage[Group].push(messageUser);
+    } else {
+      groupMessage[Group] = [messageUser];
+    }
+    io.to(Group).emit("sendMessage", messageUser);
   });
 
   socket.on("disconnect", () => {
@@ -52,8 +64,8 @@ io.on("connection", (socket) => {
     }
     if (leftuser) {
       socket.broadcast.to(leftuser.Group).emit("leave", {
-        user: "Admin",
-        message: `${leftuser.user} has left`,
+        user: leftuser.user,
+        message: `has left`,
       });
       console.log(`${leftuser.user} has left`);
     }
