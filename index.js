@@ -21,53 +21,53 @@ const io = socketIO(server);
 io.on("connection", (socket) => {
   console.log("new connection");
 
-  socket.on("joined", ({ user, Group }, cb) => {
-    socket.join(Group);
+  socket.on("joined", ({ name, groupName }, cb) => {
+    socket.join(groupName);
 
     socket.emit("welcome", {
-      user: user,
-      message: `Welcome to the chat`,
+      name: name,
+      message: `${name},Welcome to the chat`,
     });
-    const name = { id: socket.id, user, Group };
-    users.push(name);
-    console.log(`Welcome to the chat, ${user}`);
+    const user = { id: socket.id, name, groupName };
+    console.log("user", user);
+    users.push(user);
+    console.log(`Welcome to the chat`);
 
-    socket.broadcast.to(Group).emit("userJoined", {
-      user: user,
+    socket.broadcast.to(groupName).emit("userJoined", {
+      name: name,
       message: `has joined`,
     });
-    // oldMessages.map((i) => {
-    socket.emit("sendOldMessage", groupMessage[Group] || []);
-    // });
 
-    console.log(`${user} has joined`);
+    socket.emit("sendOldMessage", groupMessage[groupName] || []);
+
+    console.log(`${name} has joined`);
   });
 
-  socket.on("message", ({ message, id, Group, user }) => {
-    const messageUser = { user: user, message, id };
-    console.log(groupMessage);
-    if (groupMessage[Group]) {
-      groupMessage[Group].push(messageUser);
+  socket.on("message", ({ message, id, groupName, name }) => {
+    const messageUser = { name: name, message, id };
+    if (groupMessage[groupName]) {
+      groupMessage[groupName].push(messageUser);
     } else {
-      groupMessage[Group] = [messageUser];
+      groupMessage[groupName] = [messageUser];
     }
-    io.to(Group).emit("sendMessage", messageUser);
+    io.to(groupName).emit("sendMessage", messageUser);
+    console.log("gddfgdf", messageUser.id);
   });
 
   socket.on("disconnect", () => {
     const id = socket.id;
-    const index = users.findIndex((name) => name.id === id);
+    const index = users.findIndex((user) => user.id === id);
 
-    var leftuser;
+    var leaveuser;
     if (index !== -1) {
-      leftuser = users.splice(index, 1)[0];
+      leaveuser = users.splice(index, 1)[0];
     }
-    if (leftuser) {
-      socket.broadcast.to(leftuser.Group).emit("leave", {
-        user: leftuser.user,
+    if (leaveuser) {
+      socket.broadcast.to(leaveuser.groupName).emit("leave", {
+        name: leaveuser.name,
         message: `has left`,
       });
-      console.log(`${leftuser.user} has left`);
+      console.log(`${leaveuser.name} has left`);
     }
   });
 });
