@@ -22,6 +22,12 @@ io.on("connection", (socket) => {
   console.log("new connection");
 
   socket.on("joined", ({ name, groupName }, cb) => {
+    const userTaken = users.find(
+      (user) => user.groupName === groupName && user.name === name
+    );
+    if (userTaken) {
+      return { error: "Username is taken" };
+    }
     socket.join(groupName);
 
     socket.emit("welcome", {
